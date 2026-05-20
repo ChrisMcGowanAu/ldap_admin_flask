@@ -7,4 +7,4 @@ venv/bin/pip install ldap3
 venv/bin/pip install isort 
 venv/bin/pip install black 
 venv/bin/pip install ruff 
-
+cp config_example.py config.py
