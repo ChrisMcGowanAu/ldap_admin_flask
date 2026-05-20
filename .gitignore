@@ -1,0 +1,7 @@
+__pycache__/
+venv/
+save/
+junk/
+.ruff_cache/
+logrotate
+config.py

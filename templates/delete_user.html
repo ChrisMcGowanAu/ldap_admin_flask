@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Delete Users(s)</h2>
+  <p class="muted">
+    Use this page to delete users in bulk. In <strong>TEST MODE</strong> no real
+    changes are made — you just get a preview of what would be deleted.
+  </p>
+
+  <form method="post" id="main-form">
+    <div class="field-row">
+      <div class="field">
+        <label for="username_fragment">Username (fragment)</label>
+        <input
+          type="text"
+          id="username_fragment"
+          name="username_fragment"
+          value="{{ username_fragment or '' }}"
+          placeholder="e.g. aa"
+        >
+        <small class="muted">
+          Partial match on <code>username</code>. Example: <code>aa</code> finds usernames containing <code>aa</code>. Wildcards are not needed.
+        </small>
+      </div>
+
+      <div class="field">
+        <label for="group_gid_manual">Or gidNumber (cohort / group)</label>
+        <input
+          type="number"
+          id="group_gid_manual"
+          name="group_gid_manual"
+          min="1"
+          value="{{ group_gid_manual or '' }}"
+          placeholder="e.g. 2022"
+        >
+        <small class="muted">
+          Example: <code>2022</code>, <code>2023</code>, <code>500</code>.
+          This finds all users whose primary <code>gidNumber</code> matches.
+        </small>
+      </div>
+    </div>
+
+    <div class="field-row" style="margin-top: 1rem;">
+      <button type="submit" name="action" value="search" class="btn">
+        Search by username
+      </button>
+      <button type="submit" name="action" value="from_group" class="btn">
+        List users by gidNumber
+      </button>
+    </div>
+
+    {% if matches %}
+      <hr>
+      <h3>Matches</h3>
+      {% if message %}
+        <p class="muted">{{ message }}</p>
+      {% endif %}
+
+      <p>
+        Select one or more users to delete.
+        {% if test_mode %}
+          <strong>You are in TEST MODE – deletions will be simulated only.</strong>
+        {% else %}
+          <strong>You are in LIVE mode – deletions will affect real LDAP.</strong>
+        {% endif %}
+      </p>
+
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>
+              <input
+                type="checkbox"
+                id="select_all"
+                onclick="toggleAll(this)"
+              >
+            </th>
+            <th>uid</th>
+            <th>CN</th>
+            <th>gidNumber</th>
+            <th>homeDirectory</th>
+            <th>DN</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in matches %}
+            <tr>
+              <td>
+                <input
+                  type="checkbox"
+                  name="selected_uid"
+                  value="{{ u.uid }}"
+                >
+              </td>
+              <td>{{ u.uid }}</td>
+              <td>{{ u.cn }}</td>
+              <td>{{ u.gidNumber or '' }}</td>
+              <td>{{ u.homeDirectory or '' }}</td>
+              <td><code>{{ u.dn }}</code></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="field-row" style="margin-top: 1rem;">
+        <button
+          type="submit"
+          name="action"
+          value="delete_selected"
+          class="btn btn-danger"
+        >
+          Delete selected users
+        </button>
+      </div>
+    {% endif %}
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleAll(master) {
+    const boxes = document.querySelectorAll('input[name="selected_uid"]');
+    boxes.forEach(b => { b.checked = master.checked; });
+  }
+</script>
+{% endblock %}
+

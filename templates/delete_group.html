@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Delete Group(s)</h2>
+  <p class="muted">
+    Search for LDAP groups by name fragment or gidNumber. In <strong>TEST MODE</strong> no real
+    changes are made — you just get a preview of what would be deleted.
+  </p>
+
+  <form method="post" id="main-form">
+    <div class="field-row">
+      <div class="field">
+        <label for="group_query">Group search (cn fragment or gidNumber)</label>
+        <input
+          type="text"
+          id="group_query"
+          name="group_query"
+          value="{{ group_query or '' }}"
+          placeholder="e.g. class202 or 500"
+        >
+        <small class="muted">
+          Numeric searches match <code>gidNumber</code> exactly and also search for that number in <code>cn</code>.
+          Text searches do a partial match on <code>cn</code>.
+        </small>
+      </div>
+    </div>
+
+    <div class="field-row" style="margin-top: 1rem;">
+      <button type="submit" name="action" value="search" class="btn">
+        Search groups
+      </button>
+    </div>
+
+    {% if matches %}
+      <hr>
+      <h3>Matches</h3>
+      {% if message %}
+        <p class="muted">{{ message }}</p>
+      {% endif %}
+
+      <p>
+        Select one or more groups to delete.
+        {% if test_mode %}
+          <strong>You are in TEST MODE – deletions will be simulated only.</strong>
+        {% else %}
+          <strong>You are in LIVE mode – deletions will affect real LDAP.</strong>
+        {% endif %}
+      </p>
+
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>
+              <input type="checkbox" id="select_all" onclick="toggleAll(this)">
+            </th>
+            <th>cn</th>
+            <th>gidNumber</th>
+            <th>memberUid count</th>
+            <th>primary gid users</th>
+            <th>DN</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for g in matches %}
+            {# Row highlighting rules #}
+            {% set row_class = "" %}
+            {% if g.primary_gid_user_count and g.primary_gid_user_count > 0 %}
+              {% set row_class = "row-danger" %}
+            {% elif g.member_count and g.member_count > 0 %}
+              {% set row_class = "row-warn" %}
+            {% endif %}
+
+            <tr class="{{ row_class }}">
+              <td>
+                <input type="checkbox" name="selected_cn" value="{{ g.cn }}">
+              </td>
+              <td>{{ g.cn }}</td>
+              <td>{{ g.gidNumber or '' }}</td>
+              <td>{{ g.member_count or 0 }}</td>
+              <td>{{ g.primary_gid_user_count or 0 }}</td>
+              <td><code>{{ g.dn }}</code></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="field-row" style="margin-top: 1rem;">
+        <button type="submit" name="action" value="delete_selected" class="btn btn-danger">
+          Delete selected groups
+        </button>
+      </div>
+
+      <small class="muted">
+        Highlighting: yellow = group has <code>memberUid</code>; red = users have this as their <code>primary gidNumber</code>.
+      </small>
+    {% endif %}
+
+    {% if delete_preview %}
+      <hr>
+      <h3>Confirm deletion</h3>
+
+      <p class="muted">
+        The groups below will be deleted. Warnings are shown if the group has <code>memberUid</code> members
+        and/or users with matching primary <code>gidNumber</code>.
+      </p>
+
+      <ul>
+        {% for item in delete_preview %}
+          <li>
+            <strong>{{ item.cn }}</strong> (gid {{ item.gidNumber }})
+            {% if item.member_count > 0 %}
+              — <span class="warn">memberUid: {{ item.member_count }}</span>
+            {% endif %}
+            {% if item.primary_gid_user_count > 0 %}
+              — <span class="danger">primary gid users: {{ item.primary_gid_user_count }}</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+
+      <div class="field">
+        <label>
+          <input type="checkbox" name="confirm" value="yes" required>
+          I understand the warnings and want to proceed.
+        </label>
+      </div>
+
+      {# keep selected groups through confirm step #}
+      {% for item in delete_preview %}
+        <input type="hidden" name="selected_cn" value="{{ item.cn }}">
+      {% endfor %}
+
+      <div class="field-row" style="margin-top: 1rem;">
+        <button type="submit" name="action" value="confirm_delete" class="btn btn-danger">
+          Confirm delete
+        </button>
+      </div>
+    {% endif %}
+
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleAll(master) {
+    const boxes = document.querySelectorAll('input[name="selected_cn"]');
+    boxes.forEach(b => { b.checked = master.checked; });
+  }
+</script>
+{% endblock %}
+

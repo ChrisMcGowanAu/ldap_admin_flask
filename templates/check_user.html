@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Check / Edit User</h2>
+    <p class="muted">
+        Search for a user by username (fragment is OK), review or edit their details,
+        fix group membership, and test their password.
+    </p>
+
+    <form method="post">
+        <!-- Search section -->
+        <div class="field">
+            <label for="username">Username (fragment is OK)</label>
+            <input
+                type="text"
+                id="username"
+                name="username"
+                value="{{ request.form.get('username', '') }}"
+                placeholder="e.g. chris or max"
+            >
+            <button type="submit" name="action" value="lookup" class="btn">
+                Search
+            </button>
+        </div>
+
+        <!-- Multiple matches -->
+        {% if matches and matches|length > 0 %}
+            <h3>Matches</h3>
+            <p class="muted">
+                Multiple users matched. Click "Open" on the one you want to edit.
+            </p>
+
+            <table class="user-summary-table">
+                <thead>
+                    <tr>
+                        <th>UID</th>
+                        <th>CN</th>
+                        <th>SN</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in matches %}
+                        <tr>
+                            <td>{{ m.uid }}</td>
+                            <td>{{ m.cn or "" }}</td>
+                            <td>{{ m.sn or "" }}</td>
+                            <td>
+                                <button
+                                    type="submit"
+                                    name="action"
+                                    value="choose"
+                                    class="btn-small"
+                                    onclick="
+                                        document.getElementById('selected_uid').value='{{ m.uid }}';
+                                    "
+                                >
+                                    Open
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Hidden field used when clicking Open -->
+            <input type="hidden" id="selected_uid" name="selected_uid" value="">
+        {% endif %}
+
+        {% if user_data %}
+            <hr>
+            <!-- Preserve current uid (username)across actions -->
+            <input type="hidden" name="effective_uid" value="{{ user_data.uid }}">
+
+            <h2>Details for <code>{{ user_data.uid }}</code></h2>
+
+            <table class="user-summary">
+                <tr>
+                    <th>UID</th>
+                    <td>{{ user_data.uid }}</td>
+                </tr>
+                <tr>
+                    <!-- sn is not editable -->
+                    <th>Display Name (cn)</th>
+                    <td>
+                        <input
+                            type="text"
+                            name="cn"
+                            value="{{ user_data.cn or '' }}"
+                            readonly
+                        >
+                    </td>
+                </tr>
+                <tr>
+                    <th>Given Name</th>
+                    <td>
+                        <input
+                            type="text"
+                            name="givenName"
+                            value="{{ user_data.givenName or '' }}"
+                        >
+                    </td>
+                </tr>
+                <tr>
+                    <th>Family Name (sn)</th>
+                    <td>
+                        <!-- sn is editable -->
+                        <input
+                            type="text"
+                            name="sn"
+                            value="{{ user_data.sn or '' }}"
+                        >
+                    </td>
+                </tr>
+                <tr>
+                    <th>UID Number</th>
+                    <td>
+                        <input
+                            type="text"
+                            value="{{ user_data.uidNumber or '' }}"
+                            readonly
+                        >
+                    </td>
+                </tr>
+                <tr>
+                    <th>GID Number</th>
+                    <td>
+                        <input
+                            type="text"
+                            name="gidNumber"
+                            value="{{ user_data.gidNumber or '' }}"
+                            readonly
+                        >
+                    </td>
+                </tr>
+                <tr>
+                    <th>Class / Group</th>
+                    <td>
+                        {% set user_gid = user_data.gidNumber|int if user_data.gidNumber else None %}
+                        <select name="class_key">
+                            <!--
+                            <option value="">-- leave unchanged --</option>
+                            <option value="Staff" {% if class_key == "Staff" %}selected{% endif %}>Staff</option>
+                              {% for key, info in classes.items() %}
+                                <option value="{{ key }}" {% if class_key == key %}selected{% endif %}>
+                                  {{ key }} ({{ info.home_subdir }}, gid={{ info.gidNumber }})
+                                </option>
+                              {% endfor %}
+                            -->
+                            <!--  Char GPT removed this for the above for 
+                            -->
+                            <option value="Staff"
+                                {% if user_gid == staff_gid %}selected{% endif %}
+                            >
+                                Staff (gid={{ staff_gid }})
+                            </option>
+                            {% for key, info in classes.items() %}
+                                <option value="{{ key }}"
+                                    {% if user_gid == info.gidNumber %}selected{% endif %}
+                                >
+                                    {{ key }} ({{ info.home_subdir }}, gid={{ info.gidNumber }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <!---
+                            < small class="muted">
+                            Changing this will adjust gidNumber and homeDirectory on save.
+                         --->
+                        </small>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Home Directory</th>
+                    <td>
+                        <input
+                            type="text"
+                            name="homeDirectory"
+                            id="homeDirectory"
+                            class="wide-input"
+                            value="{{ user_data.homeDirectory or '' }}"
+                        >
+                        <button
+                          type="button"
+                          id="btn-recompute-home"
+                          class="btn"
+                        >
+                          Recompute home path
+                        </button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>Login Shell</th>
+                    <td>
+                        <input
+                            type="text"
+                            name="loginShell"
+                            value="{{ user_data.loginShell or '' }}"
+                            readonly
+                        >
+                    </td>
+                </tr>
+                <tr>
+                    <th>DN</th>
+                    <td><code>{{ user_data.dn or '' }}</code></td>
+                    <!-- 
+                    <h3>DN<code>{{ user_data.dn or '' }}</code></h3>
+                    -->
+                </tr>
+            </table>
+
+            <!-- Group membership status -->
+            {% if membership %}
+                <div class="info-box">
+                    <p>
+                        <strong>Group membership:</strong>
+                        {{ membership.msg }}
+                        {% if membership.group_dn %}
+                            (<code>{{ membership.group_dn }}</code>)
+                        {% endif %}
+                    </p>
+                    {% if not membership.ok %}
+                        <button
+                            type="submit"
+                            name="action"
+                            value="fix_membership"
+                            class="btn-small"
+                        >
+                            Fix membership
+                        </button>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <!-- Test this user's password -->
+            <hr>
+            <h3>Test this user's password</h3>
+            <p class="muted">
+                Enter the password the user believes is correct and test it
+                against LDAP. This is read-only (bind test only).
+            </p>
+
+            <div class="field-row">
+                <div class="field">
+                    <label for="test_password">Password</label>
+                    <input
+                        type="password"
+                        id="test_password"
+                        name="test_password"
+                    >
+                </div>
+                <div class="field" style="align-self: flex-end;">
+                    <button
+                        type="submit"
+                        name="action"
+                        value="test_password"
+                        class="btn"
+                    >
+                        Test password
+                    </button>
+                </div>
+            </div>
+
+            {% if password_result %}
+                <p>
+                    <strong>Result for <code>{{ password_result.username }}</code>:</strong>
+                    {% if password_result.ok %}
+                        <span style="color: #4caf50;">Password is valid.</span>
+                    {% else %}
+                        <span style="color: #ff5252;">Password is NOT valid.</span>
+                    {% endif %}
+                </p>
+                {% if password_result.msg %}
+                    <p class="muted">Details: {{ password_result.msg }}</p>
+                {% endif %}
+            {% endif %}
+
+            <hr>
+            <div class="actions">
+                <button
+                    type="submit"
+                    name="action"
+                    value="save"
+                    class="btn"
+                >
+                    Save changes
+                </button>
+            </div>
+        {% endif %}
+    </form>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+async function postJSON(url, data) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  });
+
+  const responseData = await res.json();
+
+  if (!res.ok) {
+    throw new Error(responseData.error || "Request failed: " + res.status);
+  }
+
+  return responseData;
+}
+
+const recomputeHomeButton = document.getElementById("btn-recompute-home");
+
+if (recomputeHomeButton) {
+  recomputeHomeButton.addEventListener("click", async function () {
+    const uidInput = document.querySelector('[name="effective_uid"]');
+    const classInput = document.querySelector('[name="class_key"]');
+    const homeInput = document.getElementById("homeDirectory");
+
+    const username = uidInput ? uidInput.value.trim() : "";
+    const classKey = classInput ? classInput.value.trim() : "";
+
+    if (!username) {
+      alert("No username is selected.");
+      return;
+    }
+
+    if (!classKey) {
+      alert("Please choose a class/group first.");
+      return;
+    }
+
+    try {
+      const data = await postJSON("{{ url_for('api_compute_home_directory') }}", {
+        username: username,
+        class_key: classKey
+      });
+
+      homeInput.value = data.homeDirectory;
+    } catch (err) {
+      alert(err.message || "Failed to recompute home directory.");
+    }
+  });
+}
+</script>
+{% endblock %}

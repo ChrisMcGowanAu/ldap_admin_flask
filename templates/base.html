@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Lorien LDAP Admin{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=20260208) }}">
+
+</head>
+
+<body class="{% if effective_test_mode %}test-mode{% else %}live-mode{% endif %}">
+
+  <div class="{% if effective_test_mode %}global-test-banner{% else %}global-live-banner{% endif %}">
+  <div class="banner-inner">
+    <strong class="banner-text">
+      {% if effective_test_mode %}
+        TEST MODE IS ACTIVE — Changes will NOT affect real LDAP.
+      {% else %}
+        LIVE MODE — Changes apply to real LDAP.
+      {% endif %}
+    </strong>
+
+    <form method="post" action="{{ url_for('toggle_test_mode') }}" style="display:inline;">
+      <button type="submit" name="action" value="toggle_mode" class="btn btn-mode-toggle">
+        {% if effective_test_mode %}
+          Switch to LIVE mode
+        {% else %}
+          Switch to TEST mode
+        {% endif %}
+      </button>
+    </form>
+  </div>
+</div>
+
+  <div class="mode-banner {% if effective_test_mode %}mode-test{% else %}mode-live{% endif %}">
+
+  <header class="site-header">
+    <div class="site-header-inner">
+      <div class="brand">
+        <span class="brand-title">Lorien LDAP Admin</span>
+        <span class="muted" style="margin-left:.5rem; font-size:.8rem;">{{ app_version }}</span>
+
+        <!--
+        <span class="version-pill">{{ app_version }}</span>
+        -->
+      </div>
+
+
+      <nav class="main-nav">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('new_user') }}">Create New User</a>
+        <a href="{{ url_for('check_user') }}">Check / Edit User</a>
+        <a href="{{ url_for('change_password') }}">Change Password</a>
+        <a href="{{ url_for('bulk_import') }}">Bulk Import Users</a>
+        <a href="{{ url_for('group_audit') }}">Group Audit</a>
+        <a href="{{ url_for('group_users') }}">Users by Primary Group</a>
+        <a href="{{ url_for('user_groups') }}">Manage User Groups</a>
+        <a href="{{ url_for('export_users_by_primary_group_xlsx') }}">Export Users</a>
+        <a href="{{ url_for('test_password') }}">Test Password</a>
+        <a href="{{ url_for('delete_user') }}">Delete User(s)</a>
+        <a href="{{ url_for('create_group') }}">Create Group</a>
+        <a href="{{ url_for('delete_group') }}">Delete Group(s)</a>
+        <a href="{{ url_for('logout') }}">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+
+  <script>
+  (function () {
+    const btn = document.getElementById("modeToggleBtn");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      // If page has a "main-form", submit it with action=toggle_mode (preserves typed fields)
+      const f = document.getElementById("main-form");
+      if (f) {
+        let a = f.querySelector('input[name="action"]');
+        if (!a) {
+          a = document.createElement("input");
+          a.type = "hidden";
+          a.name = "action";
+          f.appendChild(a);
+        }
+        a.value = "toggle_mode";
+        f.submit();
+        return;
+      }
+
+      // Otherwise POST to /toggle_test_mode (works on any page)
+      const fallback = document.createElement("form");
+      fallback.method = "POST";
+      fallback.action = "{{ url_for('toggle_test_mode') }}";
+      document.body.appendChild(fallback);
+      fallback.submit();
+    });
+  })();
+  </script>
+
+</body>
+</html>
+

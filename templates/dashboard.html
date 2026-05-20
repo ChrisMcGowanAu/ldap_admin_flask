@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="card">
+  <h2>Dashboard</h2>
+
+  <!-- TEST / LIVE mode banner -->
+  <div class="mode-banner {% if effective_test_mode %}mode-test{% else %}mode-live{% endif %}">
+    <strong>
+      {% if effective_test_mode %}
+        TEST MODE is ON – no real changes will be made.
+      {% else %}
+        LIVE MODE – changes will be applied to real LDAP.
+      {% endif %}
+    </strong>
+
+    <form method="post" action="{{ url_for('toggle_test_mode') }}" style="display:inline;">
+      <button type="submit" class="btn btn-mode-toggle">
+        {% if effective_test_mode %}
+          Switch to LIVE mode
+        {% else %}
+          Switch to TEST mode
+        {% endif %}
+      </button>
+    </form>
+
+    <div class="mode-detail">
+      <small>
+        Use TEST MODE to trial bulk imports and changes safely. Switch to LIVE MODE
+        once you’re happy with the results.
+      </small>
+    </div>
+  </div>
+
+  <!-- Quick info -->
+  <p>
+    Logged in as <strong>{{ session.admin_user }}</strong>.
+  </p>
+
+  <!-- Main action tiles -->
+  <div class="tile-grid">
+    <a class="tile" href="{{ url_for('new_user') }}">
+      <h3>Create New User</h3>
+      <p>Add a single staff or student account, auto-generate username/password, and set class/group.</p>
+    </a>
+
+    <a class="tile" href="{{ url_for('check_user') }}">
+      <h3>Check / Edit User</h3>
+      <p>Search by username fragment, edit user details, and verify group membership.</p>
+    </a>
+
+    <a class="tile" href="{{ url_for('change_password') }}">
+      <h3>Change Password</h3>
+      <p>Reset a user’s password using the standard password generator or a custom value.</p>
+    </a>
+
+    <a class="tile" href="{{ url_for('bulk_import') }}">
+      <h3>Bulk Import (CSV)</h3>
+      <p>Upload a CSV of new users. Run in TEST MODE first, then switch to LIVE MODE to commit.</p>
+    </a>
+
+    <a class="tile" href="{{ url_for('group_audit') }}">
+      <h3>Group Audit</h3>
+      <p>Check for missing group objects and memberUid memberships; optional fixes in TEST or LIVE mode.</p>
+    </a>
+
+    <a class="tile" href="{{ url_for('delete_user') }}">
+      <h3>Delete User(s)</h3>
+      <p>Search for an accounts and delete them. Use TEST MODE first to preview.</p>
+    </a>
+
+    <a class="tile" href="{{ url_for('group_users') }}">
+      <h3>Users by Primary Group</h3>
+      <p>View users by primary gidNumber, including staff and class cohorts.</p>
+    </a>
+
+    <a class="tile" href="{{ url_for('user_groups') }}">
+      <h3>Manage User Groups</h3>
+      <p>Add or remove supplementary memberUid groups for users, including bulk CSV additions.</p>
+    </a>
+
+    <a class="tile" href="{{ url_for('export_users_by_primary_group_xlsx') }}">
+      <h3>Export Users</h3>
+      <p>Download an XLSX audit workbook: all users sorted by uid, grouped into tabs by primary gidNumber, with secondary groups separated by semicolons.</p>
+    </a>
+
+    <a class="tile" href="{{ url_for('test_password') }}">
+      <h3>Test User Password</h3>
+      <p>
+        Check if a username/password combination is valid in LDAP.
+        Useful for helping users who say "my password doesn&#39;t work".
+      </p>
+    </a>
+
+  </div>
+
+  <div class="actions" style="margin-top: 1.5rem;">
+    <a href="{{ url_for('logout') }}" class="btn">
+      Logout
+    </a>
+  </div>
+</section>
+
+{% endblock %}
+

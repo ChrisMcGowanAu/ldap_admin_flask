@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+  <h1>Bulk Import People</h1>
+</div>
+<div class="toolbar" style="margin-bottom: 1rem;">
+  <a href="{{ url_for('bulk_import_template') }}" class="btn">
+    Download CSV template
+  </a>
+</div>
+
+<p>Recommended CSV header: 
+<code>class,given_name,family_name,username,password,full_name,home_dir</code></p>
+<p>Filled if left blank  :
+<code>username,password,full_name,home_dir</code></p>
+
+<div class="container mt-4">
+  <h3>Upload a CSV with fields:</h3>
+  <ul>
+    <li><b>Required</b>: class/group, given_name, family_name</li>
+    <li><b>Optional</b>: username, password, full_name ,home_dir</li>
+  </ul>
+
+  <form method="POST" id="main-form" enctype="multipart/form-data" class="mb-0">
+    <input type="file" name="csvfile" accept=".csv" class="form-control mb-0" required>
+    <button type="submit" class="btn btn-primary w-25">Upload</button>
+  </form>
+
+  {# IMPORTANT: results may be None (not run yet), or [] (ran but nothing processed), or list #}
+  {% if results is not none %}
+    <h3>Import Results</h3>
+
+    {% if results|length == 0 %}
+      <p class="muted">No rows processed.</p>
+    {% else %}
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Given</th>
+            <th>Family</th>
+            <th>Class</th>
+            <th>UID</th>
+            <th>Password</th>
+            <th>Status</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+            <tr class="{% if r.status == 'FAIL' %}table-danger{% elif r.status == 'OK' %}table-success{% else %}table-warning{% endif %}">
+              <td>{{ r.row.given_name }}</td>
+              <td>{{ r.row.family_name }}</td>
+              <td>{{ r.row.class or r.row.class_key }}</td>
+              <td>{{ r.uid or '' }}</td>
+              <td>{{ r.password or '' }}</td>
+              <td>{{ r.status }}</td>
+              <td>{{ r.message }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  {% endif %}
+</div>
+
+{% endblock %}
+

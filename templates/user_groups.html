@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Manage User Groups</h2>
+  <p class="muted">
+    Add or remove a user from supplementary <code>memberUid</code> groups.
+    This does not change the user's primary <code>gidNumber</code>.
+  </p>
+
+  <form method="post" id="main-form">
+    <div class="field">
+      <label for="username">Username / uid fragment</label>
+      <input id="username" name="username" value="{{ username or '' }}" autocomplete="off" placeholder="e.g. chris or max">
+    </div>
+    <button type="submit" name="action" value="lookup">Lookup user</button>
+  </form>
+
+  {% if matches %}
+    <h3>Matches</h3>
+    <p class="muted">Multiple users matched. Open the user whose groups you want to manage.</p>
+    <table class="user-summary-table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>cn</th>
+          <th>gidNumber</th>
+          <th>homeDirectory</th>
+          <th>action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in matches %}
+          <tr>
+            <td>{{ m.uid }}</td>
+            <td>{{ m.cn or '' }}</td>
+            <td>{{ m.gidNumber or '' }}</td>
+            <td><code>{{ m.homeDirectory or '' }}</code></td>
+            <td>
+              <form method="post" style="display:inline;">
+                <input type="hidden" name="selected_uid" value="{{ m.uid }}">
+                <button type="submit" name="action" value="choose_user">Open</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {% if user %}
+    <hr>
+    <h3>{{ user.uid }} — {{ user.cn }}</h3>
+    <p>
+      Primary gidNumber: <strong>{{ user.gidNumber }}</strong><br>
+      Home directory: <code>{{ user.homeDirectory }}</code><br>
+      DN: <code>{{ user.dn }}</code>
+    </p>
+
+    <h3>Add to supplementary group</h3>
+    <form method="post">
+      <input type="hidden" name="username" value="{{ user.uid }}">
+      <div class="field">
+        <label for="group_gid">Choose existing group</label>
+        <select id="group_gid" name="group_gid" required>
+          <option value="">-- choose group --</option>
+          {% for g in groups_for_select %}
+            <option value="{{ g.gidNumber }}">
+              {{ g.cn }} (gid {{ g.gidNumber }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" name="action" value="add_group">Add to group</button>
+      <small class="muted">
+        In TEST MODE this only reports what would be changed.
+      </small>
+    </form>
+
+    <h3>Current memberUid groups</h3>
+    {% if member_groups %}
+      <table>
+        <thead>
+          <tr>
+            <th>cn</th>
+            <th>gidNumber</th>
+            <th>type</th>
+            <th>DN</th>
+            <th>action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for g in member_groups %}
+            <tr>
+              <td>{{ g.cn }}</td>
+              <td>{{ g.gidNumber }}</td>
+              <td>
+                {% if g.is_primary %}
+                  primary gidNumber group
+                {% else %}
+                  supplementary
+                {% endif %}
+              </td>
+              <td><code>{{ g.dn }}</code></td>
+              <td>
+                {% if g.is_primary %}
+                  <span class="muted">managed by primary gidNumber / Group Audit</span>
+                {% else %}
+                  <form method="post" style="display:inline;">
+                    <input type="hidden" name="username" value="{{ user.uid }}">
+                    <input type="hidden" name="remove_gid" value="{{ g.gidNumber }}">
+                    <button type="submit" name="action" value="remove_group">Remove</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">This user is not listed in any group.memberUid entries.</p>
+    {% endif %}
+  {% endif %}
+
+</section>
+
+<section class="card" id="bulk-group-membership" style="margin-top: 1rem;">
+  <h2>Bulk Add Users to Supplementary Groups</h2>
+  <p class="muted">
+    Upload a CSV to add many users to existing supplementary <code>memberUid</code> groups.
+    Required logical columns are <code>username</code> or <code>uid</code> and either <code>gid</code> / <code>gidNumber</code>
+    or an exact group <code>cn</code>. Extra columns are ignored.
+     <a href="{{ url_for('bulk_group_membership_template') }}">Download CSV template</a>.
+  </p>
+
+  <form method="post" enctype="multipart/form-data" action="{{ url_for('user_groups') }}#bulk-group-membership">
+    <div class="field">
+      <label for="group_membership_csv">CSV file</label>
+      <input type="file" id="group_membership_csv" name="group_membership_csv" accept=".csv,text/csv">
+      <small class="muted">
+        Accepted headers include
+        <code>uid</code>, <code>username</code>, <code>gid</code>, <code>gidNumber</code>,
+        <code>group</code>, <code>group_name</code>, <code>cn</code>.
+      </small>
+    </div>
+
+    <div class="actions">
+      <button type="submit" name="action" value="bulk_group_preview" class="btn">Preview</button>
+      <button
+          type="submit"
+          name="action"
+          value="bulk_group_apply"
+          id="bulk-group-apply-button"
+          class="btn btn-danger"
+          {% if not test_mode %}disabled{% endif %} > Apply
+       </button>
+      {% if not test_mode %}
+        <label style="margin-left: 1rem;">
+          <input
+              type="checkbox"
+              name="confirm_live"
+              value="yes"
+              id="bulk-group-confirm-live" >
+          Confirm LIVE changes. This will add users to supplementary LDAP groups.
+        </label>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if bulk_group_result_message %}
+    <div class="flash flash-{{ bulk_group_result_category or 'info' }}" style="margin-top: .75rem;">
+      {{ bulk_group_result_message }}
+    </div>
+  {% endif %}
+
+  {% if bulk_group_stats %}
+    <div class="notice">
+      Bulk group action completed/rendered.
+    </div>
+    <p class="muted" style="margin-top: .75rem;">
+      Rows: {{ bulk_group_stats.total_rows }},
+      ready: {{ bulk_group_stats.ready }},
+      missing: {{ bulk_group_stats.missing }},
+      users not found: {{ bulk_group_stats.not_found }},
+      group errors: {{ bulk_group_stats.group_errors }},
+      mode: <strong>{{ bulk_group_stats.mode }}</strong>
+    </p>
+  {% endif %}
+
+  {% if bulk_group_preview %}
+    <table class="user-summary-table">
+      <thead>
+        <tr>
+          <th>Row</th>
+          <th>Username</th>
+          <th>Group input</th>
+          <th>Resolved group</th>
+          <th>Status</th>
+          <th>Note</th>
+          <th>Apply status</th>
+          <th>Apply message</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in bulk_group_preview %}
+          <tr>
+            <td>{{ r.rownum }}</td>
+            <td>{{ r.username or r.uid }}</td>
+            <td><code>{{ r.group_input }}</code></td>
+            <td>
+              {% if r.group_cn %}
+                {{ r.group_cn }} (gid {{ r.gidNumber }})
+              {% endif %}
+            </td>
+            <td>{{ r.status }}</td>
+            <td class="muted">{{ r.msg }}</td>
+            <td>{{ r.apply_status or "" }}</td>
+            <td>{{ r.apply_msg or "" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const confirmBox = document.getElementById("bulk-group-confirm-live");
+  const applyButton = document.getElementById("bulk-group-apply-button");
+
+  if (!confirmBox || !applyButton) {
+    return;
+  }
+
+  function updateApplyButton() {
+    applyButton.disabled = !confirmBox.checked;
+  }
+
+  confirmBox.addEventListener("change", updateApplyButton);
+  updateApplyButton();
+});
+</script>
+
+{% endblock %}

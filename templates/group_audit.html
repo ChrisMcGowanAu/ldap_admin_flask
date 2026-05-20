@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Group Audit</h2>
+
+  <form method="post" id="main-form">
+    <div class="field-row">
+      <button type="submit" name="action" value="audit_current">Audit current cohorts + staff</button>
+      <button type="submit" name="action" value="audit_all">Audit ALL users</button>
+    </div>
+
+    <hr>
+
+    <h3>Single group audit</h3>
+
+    <div class="field">
+      <label for="group_gid_manual">Group gidNumber (e.g. 2023, 2024, 500)</label>
+      <input
+        type="number"
+        id="group_gid_manual"
+        name="group_gid_manual"
+        min="1"
+        value="{{ selected_group_gid or '' }}"
+      >
+      <small class="muted">
+        If you know the gidNumber, enter it here. This takes precedence over the dropdown below.
+      </small>
+    </div>
+
+    <div class="field">
+      <label for="group_gid">Or choose an existing posixGroup</label>
+      <select id="group_gid" name="group_gid">
+        <option value="">-- choose group --</option>
+        {% for g in groups_for_select %}
+          <option value="{{ g.gidNumber }}" {% if selected_group_gid == g.gidNumber %}selected{% endif %}>
+            {{ g.cn }} (gid {{ g.gidNumber }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" name="action" value="audit_group">Audit selected group</button>
+  </form>
+
+  {% if summary %}
+    <h3>Summary</h3>
+    <p>
+      Missing group objects: {{ summary.missing_groups }}<br>
+      Users affected by missing groups: {{ summary.users_affected_by_missing_groups }}<br>
+      Missing memberUid membership: {{ summary.missing_memberships }}<br>
+      Skipped invalid/incomplete users: {{ summary.skipped }}<br>
+      Outside selected audit scope: {{ summary.outside_scope }}
+    </p>
+  {% endif %}
+
+  {% if audit.missing_groups %}
+    <h3>Missing group objects</h3>
+    <p class="muted">
+      These are unique missing gidNumbers. Expand a row to see affected users.
+      Only groups marked as safely auto-creatable can be selected here; others should be reviewed and created manually.
+    </p>
+
+    {% set fixable_missing_groups = audit.missing_groups | selectattr('fixable') | list %}
+
+    <form method="post">
+      <input type="hidden" name="last_mode" value="{{ mode }}">
+      <input type="hidden" name="selected_group_gid" value="{{ selected_group_gid or '' }}">
+
+      <table>
+        <thead>
+          <tr>
+            <th>
+              {% if fixable_missing_groups %}
+                <input type="checkbox" id="select_all_missing_groups" onclick="toggleMissingGroups(this)">
+              {% endif %}
+              Create?
+            </th>
+            <th>gidNumber</th>
+            <th>expected cn</th>
+            <th>affected users</th>
+            <th>group DN</th>
+            <th>note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in audit.missing_groups %}
+            <tr>
+              <td>
+                {% if row.fixable %}
+                  <input type="checkbox" name="missing_gid" value="{{ row.gidNumber }}">
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>{{ row.gidNumber }}</td>
+              <td>{{ row.expected_cn }}</td>
+              <td>
+                <details>
+                  <summary>{{ row.affected_count }} user(s)</summary>
+                  <ul>
+                    {% for u in row.affected_users %}
+                      <li><code>{{ u.uid }}</code>{% if u.cn %} — {{ u.cn }}{% endif %}</li>
+                    {% endfor %}
+                  </ul>
+                </details>
+              </td>
+              <td><code>{{ row.group_dn }}</code></td>
+              <td>{{ row.fix_reason }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if fixable_missing_groups %}
+        <div class="field-row" style="margin-top: 1rem;">
+          <button type="submit" name="action" value="fix_missing_groups">
+            Create selected missing groups
+          </button>
+          <small class="muted">
+            In TEST MODE this only reports what would be created.
+          </small>
+        </div>
+      {% else %}
+        <p class="muted" style="margin-top: 1rem;">
+          None of the missing groups in this audit are marked as safe to auto-create.
+          Create/review these manually.
+        </p>
+      {% endif %}
+    </form>
+  {% endif %}
+
+  {% if audit.missing_memberships %}
+    <h3>Missing memberUid membership</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>uid</th>
+          <th>CN</th>
+          <th>gidNumber</th>
+          <th>group</th>
+          <th>group DN</th>
+          <th>reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in audit.missing_memberships %}
+          <tr>
+            <td>{{ row.uid }}</td>
+            <td>{{ row.cn }}</td>
+            <td>{{ row.gidNumber }}</td>
+            <td>{{ row.group_cn }}</td>
+            <td><code>{{ row.group_dn }}</code></td>
+            <td>{{ row.reason }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {% if audit.skipped_users %}
+    <h3>Skipped invalid/incomplete users</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>uid</th>
+          <th>CN</th>
+          <th>gidNumber</th>
+          <th>DN</th>
+          <th>reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in audit.skipped_users %}
+          <tr>
+            <td>{{ row.uid }}</td>
+            <td>{{ row.cn }}</td>
+            <td>{{ row.gidNumber }}</td>
+            <td><code>{{ row.dn }}</code></td>
+            <td>{{ row.reason }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {% if audit.outside_scope_users %}
+    <h3>Outside selected audit scope</h3>
+    <p class="muted">
+      These are valid users ignored by the selected audit mode, usually old cohorts when auditing current cohorts only.
+    </p>
+    <details>
+      <summary>{{ audit.outside_scope_users|length }} user(s)</summary>
+      <table>
+        <thead>
+          <tr>
+            <th>uid</th>
+            <th>CN</th>
+            <th>gidNumber</th>
+            <th>DN</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in audit.outside_scope_users %}
+            <tr>
+              <td>{{ row.uid }}</td>
+              <td>{{ row.cn }}</td>
+              <td>{{ row.gidNumber }}</td>
+              <td><code>{{ row.dn }}</code></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  {% endif %}
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleMissingGroups(master) {
+    const boxes = document.querySelectorAll('input[name="missing_gid"]');
+    boxes.forEach(b => { b.checked = master.checked; });
+  }
+</script>
+{% endblock %}

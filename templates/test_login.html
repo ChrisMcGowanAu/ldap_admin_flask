@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card card-narrow">
+    <h2>Test Login</h2>
+    <p class="muted">Check whether a given username (or fragment) and password can bind successfully.</p>
+    <form method="post">
+        <label for="username">Username (uid)</label>
+        <input type="text" id="username" name="username" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit">Test</button>
+    </form>
+
+    {% if result is not none %}
+        <div class="test-result {{ 'ok' if result.ok else 'fail' }}">
+            {% if result.ok %}
+                <p>✅ Bind successful: {{ result.message }}</p>
+            {% else %}
+                <p>❌ Bind failed: {{ result.message }}</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

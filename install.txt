@@ -1,0 +1,10 @@
+python3 -m venv venv
+venv/bin/pip install -U pip
+venv/bin/pip install -r requirements.locked.txt
+venv/bin/pip install flask
+venv/bin/pip install gunicorn
+venv/bin/pip install ldap3
+venv/bin/pip install isort 
+venv/bin/pip install black 
+venv/bin/pip install ruff 
+

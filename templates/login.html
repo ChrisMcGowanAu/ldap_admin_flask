@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card card-narrow">
+    <h2>Admin Login</h2>
+    <p class="muted">Sign in with your LDAP admin (or IT staff) account.</p>
+    <form method="post">
+        <label for="username">Username (uid)</label>
+        <input type="text" id="username" name="username" required autofocus>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit">Login</button>
+    </form>
+</section>
+{% endblock %}

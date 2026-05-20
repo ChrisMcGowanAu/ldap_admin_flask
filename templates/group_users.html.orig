@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Users by Primary Group</h2>
+  <p class="field">
+    View users by primary <code>gidNumber</code>. This checks the user's own
+    <code>gidNumber</code> attribute, not secondary <code>memberUid</code> groups.
+  </p>
+
+  <form method="post" id="main-form">
+    <div class="field">
+      <label for="group_gid_manual">Group gidNumber</label>
+      <input
+        type="number"
+        id="group_gid_manual"
+        name="group_gid_manual"
+        min="1"
+        value="{{ selected_gid or '' }}"
+      >
+      <small class="muted">
+        Example: <code>2022</code>, <code>2023</code>, <code>500</code>.
+        This works even if the posixGroup object is missing.
+      </small>
+    </div>
+
+    <div class="field">
+      <label for="group_gid">Or choose an existing posixGroup</label>
+      <select id="group_gid" name="group_gid">
+        <option value="">-- choose group --</option>
+        {% for g in groups_for_select %}
+          <option value="{{ g.gidNumber }}" {% if selected_gid == g.gidNumber %}selected{% endif %}>
+            {{ g.cn }} (gid {{ g.gidNumber }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field-row" style="margin-top: 1rem;">
+      <button type="submit" name="action" value="show" class="btn">
+        Show users
+      </button>
+    </div>
+  </form>
+
+  {% if users %}
+    <h3>Users with primary gidNumber {{ selected_gid if selected_gid is not none else '' }}</h3>
+    {% if message %}
+      <p class="muted">{{ message }}</p>
+    {% endif %}
+
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>uid</th>
+          <th>CN</th>
+          <th>gidNumber</th>
+          <th>homeDirectory</th>
+          <th>DN</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td>{{ u.uid }}</td>
+            <td>{{ u.cn }}</td>
+            <td>{{ u.gidNumber }}</td>
+            <td>{{ u.homeDirectory }}</td>
+            <td><code>{{ u.dn }}</code></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% elif selected_gid %}
+    <p class="muted">No users found for that primary gidNumber.</p>
+  {% endif %}
+</section>
+{% endblock %}

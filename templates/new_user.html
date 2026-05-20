@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h2>New User</h2>
+  <p class="muted">Create a new LDAP user with sensible defaults.</p>
+
+  <form method="post" id="main-form">
+    <div class="field-row">
+      <div class="field">
+        <label for="given_name">Given name</label>
+        <input
+          type="text"
+          id="given_name"
+          name="given_name"
+          required
+          value="{{ request.form.get('given_name', '') }}"
+        >
+      </div>
+
+      <div class="field">
+        <label for="family_name">Family name</label>
+        <input
+          type="text"
+          id="family_name"
+          name="family_name"
+          required
+          value="{{ request.form.get('family_name', '') }}"
+        >
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="class_key">Class</label>
+        <select id="class_key" name="class_key" required>
+          <option value="">-- choose --</option>
+
+          {# Staff option #}
+          {% set selected_class = request.form.get('class_key', '') or default_class %}
+          <option value="Staff" {% if selected_class == "Staff" %}selected{% endif %}>Staff</option>
+
+          {# Student cohorts #}
+          {% for key, info in classes.items() %}
+            <option value="{{ key }}" {% if selected_class == key %}selected{% endif %}>
+              {{ key }} ({{ info.home_subdir }}, gid={{ info.gidNumber }})
+            </option>
+          {% endfor %}
+        </select>
+
+        <small class="muted">
+            <code>/home/username</code> or a graduation-year group layout.
+        </small>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="username">Username (uid)</label>
+        <div class="inline-field">
+          <input
+            type="text"
+            id="username"
+            name="username"
+            required
+            value="{{ request.form.get('username', '') }}"
+          >
+          <button type="button" id="btn-generate-username" class="btn">Auto</button>
+        </div>
+        <small class="muted">
+          Default: given name + first letter of family name, lower case.
+          Collisions become <code>uid1</code>, <code>uid2</code>, ...
+        </small>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field" style="width:100%;">
+        <label for="fullName">Full Name</label>
+        <input
+          type="text"
+          id="fullName"
+          name="fullName"
+          class="wide-input"
+          value="{{ request.form.get('fullName','') }}"
+          placeholder="Will be calculated (editable)"
+        >
+        <small class="muted">Calculated from Given and Family names. You can override if needed.</small>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="inline-field">
+          <input
+            type="text"
+            id="password"
+            name="password"
+            required
+            value="{{ request.form.get('password', '') }}"
+          >
+
+          <!--
+          <button type="button" id="btn-generate-password" class="btn">Generate</button>
+          -->
+          <button
+              type="button"
+              id="btn-generate-password-kid"
+              class="btn"
+              data-pwgen-url="{{ url_for('api_generate_password') }}"
+              data-pwgen-target="#password"
+              data-pwgen-kind="kid"
+          >
+              Generate kid
+          </button>
+          <button
+              type="button"
+              id="btn-generate-password-adult"
+              class="btn"
+              data-pwgen-url="{{ url_for('api_generate_password') }}"
+              data-pwgen-target="#password"
+              data-pwgen-kind="adult"
+          >
+              Generate adult
+          </button>
+
+        </div>
+        <small class="muted">
+          Kid format: two words + two digits + <code>?</code>, e.g. <code>RiverKoala42?</code>.<br>
+          Adult format: stronger grouped temporary password, e.g. <code>R7kQ-m3Pz-T9x@</code>.
+        </small>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field" style="width:100%;">
+        <label for="homeDirectory">Home Directory</label>
+        <input
+          type="text"
+          id="homeDirectory"
+          name="homeDirectory"
+          class="wide-input"
+          value="{{ request.form.get('homeDirectory','') }}"
+          placeholder="Will be calculated (editable)"
+        >
+        <small class="muted">Calculated from class + uid. You can override if needed.</small>
+      </div>
+</div>
+
+
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">Create User</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function postJSON(url, data) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  });
+
+  const responseData = await res.json();
+
+  if (!res.ok) {
+    throw new Error(responseData.error || "Request failed: " + res.status);
+  }
+
+  return responseData;
+}
+
+function capitalizeFirstLetter(value) {
+  const stringLow = (value || "").toLowerCase();
+  return stringLow.charAt(0).toUpperCase() + stringLow.slice(1);
+}
+
+async function computeHomeDirectory(uid, classKey) {
+  const data = await postJSON("{{ url_for('api_compute_home_directory') }}", {
+    username: uid,
+    class_key: classKey
+  });
+
+  return data.homeDirectory;
+}
+
+document.getElementById("btn-generate-username").addEventListener("click", async () => {
+  let given = document.getElementById("given_name").value.trim();
+  let family = document.getElementById("family_name").value.trim();
+  const classKey = document.getElementById("class_key").value;
+
+  if (!given || !family) {
+    alert("Please fill in given name and family name first.");
+    return;
+  }
+
+  if (!classKey) {
+    alert("Please choose a class first.");
+    return;
+  }
+
+  const givenFixed = capitalizeFirstLetter(given);
+  const familyFixed = capitalizeFirstLetter(family);
+
+  document.getElementById("given_name").value = givenFixed;
+  document.getElementById("family_name").value = familyFixed;
+
+  given = givenFixed;
+  family = familyFixed;
+
+  try {
+    const data = await postJSON("{{ url_for('api_generate_username') }}", {
+      given_name: given,
+      family_name: family
+    });
+
+    if (!data.username) {
+      alert("Username generator did not return a username.");
+      return;
+    }
+
+    const uid = data.username;
+    document.getElementById("username").value = uid;
+
+    const home = await computeHomeDirectory(uid, classKey);
+    document.getElementById("homeDirectory").value = home;
+
+    const full = `${given} ${family}`;
+    document.getElementById("fullName").value = full;
+  } catch (e) {
+    console.error(e);
+    alert(e.message || "Failed to generate username.");
+  }
+});
+
+
+<!--
+document.getElementById("btn-generate-password").addEventListener("click", async () => {
+  try {
+    const data = await postJSON("{{ url_for('api_generate_password') }}", {});
+    if (data.password) {
+      document.getElementById("password").value = data.password;
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Failed to generate password.");
+  }
+});
+-->
+async function computeHomeDirectory(uid, classKey) {
+  const response = await fetch("{{ url_for('api_compute_home_directory') }}", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      username: uid,
+      class_key: classKey
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to compute home directory");
+  }
+
+  return data.homeDirectory;
+}
+</script>
+
+<script src="{{ url_for('static', filename='password_gen.js') }}"></script>
+
+{% endblock %}
+
