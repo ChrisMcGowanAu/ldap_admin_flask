@@ -24,7 +24,7 @@ jobs:
       with:
         python-version: "3.12"
     - name: Create test config.py
-       run: cp config_example.py config.py
+      run: cp config_example.py config.py
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
