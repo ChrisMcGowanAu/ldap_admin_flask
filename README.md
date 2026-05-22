@@ -103,6 +103,10 @@ ruff check .
 
 GitHub Actions creates a temporary `config.py` from `config_example.py` for syntax checks.
 
+## Acknowledgements
+
+This project was developed with assistance from ChatGPT, which helped with code review, refactoring, documentation, testing workflows, UI improvements, and the occasional LDAP/JavaScript rabbit hole.
+
 ## Licence
 
 This project is licensed under the GNU General Public License v3.0.
