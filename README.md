@@ -22,6 +22,38 @@ This project was originally built for Lorien Novalis School in NSW, Australia, t
 - Optional generated password/export files for school environments.
 - Optional Zimbra provisioning output for sites that need it.
 
+## Screenshots
+
+### Dashboard
+
+The dashboard provides quick access to the main LDAP administration workflows.
+
+![Dashboard](docs/screenshots/ldap_dashboard.png)
+
+### Check / Edit User
+
+Search for users by username fragment, review LDAP attributes, update editable fields, verify group membership, and recompute home-directory paths from the configured home style.
+
+![Check and edit user](docs/screenshots/ldap_user_edit.png)
+
+### Group Audit
+
+Audit primary `gidNumber`, missing `posixGroup` objects, and supplementary `memberUid` consistency before making changes.
+
+![Group audit](docs/screenshots/ldap_group_audit.png)
+
+### Manage User Groups
+
+Add or remove supplementary groups for individual users, or bulk add group memberships from a CSV file.
+
+![Manage user groups](docs/screenshots/ldap_manage_groups.png)
+
+### Additional screenshots
+
+- [Create New User](docs/screenshots/ldap_new_user.png)
+- [Bulk Import Users](docs/screenshots/ldap_bulk_import.png)
+- [Delete Users](docs/screenshots/ldap_delete_users.png)
+
 ## Status
 
 This project is useful, but still site-admin oriented. Read the configuration and installation notes carefully before using it against a live LDAP directory.
