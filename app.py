@@ -24,7 +24,6 @@ import os
 import secrets
 from datetime import timedelta
 from typing import Any
-install.txt
 from flask import (
     Flask,
     Response,
