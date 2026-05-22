@@ -1,27 +1,76 @@
-# LDAP Admin Flask Tool – pretty UI + username collision + editable Check User + Bulk imports via csv + Full report of users in spreadsheet.
-Background:
-This tool was first built for Lorien Novalis school (NSW Australia) to help manage our LDAP database. There was a need to being able to do bulk additions as the school has a need for this at the beginning of each school term. It has a facility to generate kid friendly passwords, that are reasonably strong yet not hard to remember, There passwords are used for wi-fi login, teams login and the Linux student machines. 
-The tool can be configured to handle the common home setup of /home/USER, or the school setup Lorien uses, which is the year of graduation as the group. For example, for students graduating in 2030 the group name is Class2030 and the groupiD id 2030. Thus these year 8 students (in 2026 ) have a base home of /lorienNet/Class2030. 
-Adding new users is quite easy, and adding a batch of new users can be done via a csv file. The tool will even generate passwords for the new users in the batch file, and create new home directories and email adresses.
-Whilst there are some good tools around to manage LDAP, we found these hard to use and were limited to adding one user at a time, or forces to use DIY shell scripts to interface with LDAP.
+# LDAP Admin Flask Tool
 
-Features:
+A Flask-based LDAP administration tool for schools and small organisations.
 
-- Dynamic class → cohort mapping (Class 12..7 → classYYYY home dirs)
-- Login using uid (or fragment), resolved to cn=Full Name DNs under ou=people,dc=lorien
-- Username generator (given name + first letter of family name)
-- Password generator (TwoWordsNN?) 
-- Username collision handling:
-  - If requested uid exists, automatically uses uid1, uid2, ...
-- Dark, prettier UI
-- Check User:
-  - Accepts full or partial uid (first matching entry is used)
-  - Shows attributes
-  - Allows editing: givenName, sn, displayName, homeDirectory, loginShell
+This project was originally built for Lorien Novalis School in NSW, Australia, to make common OpenLDAP administration tasks safer and easier than one-off shell scripts.
 
+## Features
 
-## Local fixes included
+- Create LDAP users.
+- Check and edit user attributes.
+- Change user passwords.
+- Bulk import users from CSV.
+- Bulk change passwords from CSV.
+- Manage supplementary `memberUid` groups.
+- Bulk add users to supplementary groups from CSV.
+- Audit primary `gidNumber` / `posixGroup` / `memberUid` consistency.
+- Export users to an XLSX spreadsheet grouped by primary group.
+- Generate kid-friendly or stronger temporary passwords.
+- Support different home-directory styles:
+  - `classic_unix`: `/home/{username}`
+  - `graduation_year_group`: school-style staff/class-year paths
+- Optional generated password/export files for school environments.
+- Optional Zimbra provisioning output for sites that need it.
 
-- `TEST_MODE` default set to `False` in `config_example.py`
-- Login now enforces `ADMIN_UID_ALLOWLIST` (edit in your real `config.py`)
-- Username generation now uses given name + **first letter** of family name
+## Status
+
+This project is useful, but still site-admin oriented. Read the configuration and installation notes carefully before using it against a live LDAP directory.
+
+Start in TEST mode.
+
+## Installation
+
+See [INSTALL.md](INSTALL.md).
+
+## Configuration
+
+`config.py` is intentionally not tracked by git. Create it from one of the example files:
+
+```bash
+cp config_example.py config.py
+```
+
+or, for a school-style setup if provided:
+
+```bash
+cp config_school.py config.py
+```
+
+Then edit it for your LDAP tree, bind account, admin allowlist, classes/groups, and home-directory style.
+
+## Security notes
+
+This tool can create, modify, and delete LDAP users/groups. Treat it like an administrative tool.
+
+Recommended precautions:
+
+- Run behind HTTPS.
+- Restrict access to trusted networks or VPNs.
+- Use `ADMIN_UID_ALLOWLIST`.
+- Use TEST mode before LIVE mode.
+- Do not commit `config.py`.
+- Do not commit generated password CSV files.
+- Use a least-privilege LDAP bind account where practical.
+
+## Development checks
+
+```bash
+python -m compileall -q .
+ruff check .
+```
+
+GitHub Actions creates a temporary `config.py` from `config_example.py` for syntax checks.
+
+## Licence
+
+This is licenced under gpl-3.0 see https://www.gnu.org/licenses/gpl-3.0.en.html
