@@ -1,10 +1,30 @@
+try:
+    import config
+except ModuleNotFoundError as e:
+    if e.name != "config":
+        raise
+
+    raise RuntimeError(
+        "\n\n"
+        "Missing config.py\n"
+        "=================\n"
+        "This application needs a local config.py file.\n\n"
+        "Create one with:\n\n"
+        "    cp config_example.py config.py\n"
+        "    nano config.py\n\n"
+        "Then restart the service:\n\n"
+        "    sudo systemctl restart ldap-admin.service\n\n"
+        "config.py is intentionally not tracked by git because it contains\n"
+        "site-specific LDAP settings and secrets.\n"
+    ) from e
+
 import csv
 import io
 import os
 import secrets
 from datetime import timedelta
 from typing import Any
-
+install.txt
 from flask import (
     Flask,
     Response,
@@ -16,6 +36,7 @@ from flask import (
     session,
     url_for,
 )
+
 
 import config
 from home_paths import compute_home_directory

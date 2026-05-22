@@ -1,0 +1,30 @@
+[Unit]
+Description=LDAP Admin Flask Tool
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Adjust these if you install somewhere else.
+WorkingDirectory=/opt/ldap_admin_flask
+
+# Run as a restricted service account where possible.
+# For a first test you may use your normal admin user, but avoid running as root long term.
+User=www-data
+Group=www-data
+
+Environment=PYTHONUNBUFFERED=1
+
+# Keep Gunicorn bound to localhost if using nginx/apache as a reverse proxy.
+# Change 127.0.0.1 to 0.0.0.0 only if you intentionally want direct LAN access.
+ExecStart=/opt/ldap_admin_flask/venv/bin/gunicorn \
+  --workers 3 \
+  --bind 127.0.0.1:5000 \
+  app:app
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -73,4 +73,7 @@ GitHub Actions creates a temporary `config.py` from `config_example.py` for synt
 
 ## Licence
 
-This is licenced under gpl-3.0 see https://www.gnu.org/licenses/gpl-3.0.en.html
+This project is licensed under the GNU General Public License v3.0.
+
+See [LICENSE](LICENSE) or the GNU GPL v3.0 text:
+https://www.gnu.org/licenses/gpl-3.0.en.html
