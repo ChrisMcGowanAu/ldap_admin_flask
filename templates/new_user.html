@@ -6,6 +6,7 @@
   <p class="muted">Create a new LDAP user with sensible defaults.</p>
 
   <form method="post" id="main-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="field-row">
       <div class="field">
         <label for="given_name">Given name</label>

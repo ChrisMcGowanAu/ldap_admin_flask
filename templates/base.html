@@ -21,6 +21,7 @@
     </strong>
 
     <form method="post" action="{{ url_for('toggle_test_mode') }}" style="display:inline;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <button type="submit" name="action" value="toggle_mode" class="btn btn-mode-toggle">
         {% if effective_test_mode %}
           Switch to LIVE mode

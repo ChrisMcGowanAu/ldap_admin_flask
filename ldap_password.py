@@ -17,6 +17,18 @@ def hash_password_for_ldap(plain: str) -> str:
 
     This matches the format produced by 'slappasswd -h {SSHA}'.
     The stored value looks like: {SSHA}<base64(sha1(password+salt) + salt)>
+
+    Security note
+    -------------
+    {SSHA} uses SHA-1 which is cryptographically weak by modern standards.
+    It is used here because it remains the most widely-supported scheme in
+    OpenLDAP deployments and is compatible with Sophos, Zimbra/Synacor, and
+    other services that bind against the LDAP directory.
+
+    If your OpenLDAP server supports it, consider migrating to a stronger
+    scheme such as {ARGON2} or {PBKDF2-SHA512}.  You can set the default
+    hash on the server side via ``olcPasswordHash`` (cn=config) so that
+    slapd upgrades existing hashes transparently on the next bind.
     """
     if plain is None:
         plain = ""

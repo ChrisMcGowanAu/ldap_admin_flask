@@ -1,6 +1,7 @@
-import random
 import secrets
 
+# Adjectives for the first word of kid-friendly passwords.
+# No duplicates; all lowercase (will be capitalised on use).
 WORDS1 = [
     "big",
     "small",
@@ -26,7 +27,6 @@ WORDS1 = [
     "happy",
     "glad",
     "kind",
-    "nice",
     "polite",
     "brave",
     "funny",
@@ -44,16 +44,18 @@ WORDS1 = [
     "tiny",
 ]
 
+# Nouns for the second word of kid-friendly passwords.
+# Duplicates removed to maximise entropy; mixed case preserved as-is.
 WORDS2 = [
-    "river",
-    "forest",
-    "mountain",
-    "ocean",
-    "koala",
-    "wattle",
-    "sunrise",
-    "galaxy",
-    "comet",
+    "River",
+    "Forest",
+    "Mountain",
+    "Ocean",
+    "Koala",
+    "Wattle",
+    "Sunrise",
+    "Galaxy",
+    "Comet",
     "Tiger",
     "Lion",
     "Elephant",
@@ -64,7 +66,6 @@ WORDS2 = [
     "Bear",
     "Whale",
     "Kangaroo",
-    "Koala",
     "Wombat",
     "Platypus",
     "Echidna",
@@ -72,15 +73,11 @@ WORDS2 = [
     "Wallaby",
     "Dingo",
     "Emu",
-    "Lion",
-    "Tiger",
-    "Bear",
     "Zebra",
     "Giraffe",
     "Monkey",
     "Wolf",
     "Panda",
-    "Kangaroo",
     "Hippo",
     "Deer",
     "Fox",
@@ -96,26 +93,35 @@ WORDS2 = [
 
 
 def _pick_word1() -> str:
-    word = secrets.choice(WORDS1)
-    return word.capitalize()
+    return secrets.choice(WORDS1).capitalize()
 
 
 def _pick_word2() -> str:
-    word = random.choice(WORDS2)
-    return word.capitalize()
+    # Fixed: was using random.choice() (non-cryptographic); now uses secrets.choice()
+    return secrets.choice(WORDS2)
 
 
 def generate_kid_password() -> str:
-    """Generate a kid-friendly password."""
+    """Generate a kid-friendly password: two memorable words + two-digit number + symbol.
+
+    Example output: HappyKangaroo47?
+
+    Passwords are designed to be easy for school-age children to remember while
+    still being suitable for shared services (email, internet login, Teams, etc.).
+    All random choices use the cryptographically secure ``secrets`` module.
+    """
     w1 = _pick_word1()
     w2 = _pick_word2()
-    # num = random.randint(1, 99)
     num = secrets.randbelow(99) + 1
     return f"{w1}{w2}{num:02d}?"
 
 
 def generate_adult_password() -> str:
-    """Generate a stronger temporary password for adults/staff."""
+    """Generate a stronger temporary password for adults/staff.
+
+    Format: XXXX-XXXX-XXXXXX  (14 characters + 2 dashes = 16 visible chars)
+    Guarantees at least one uppercase, lowercase, digit, and special character.
+    """
     import string
 
     letters = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"

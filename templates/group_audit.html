@@ -4,6 +4,7 @@
   <h2>Group Audit</h2>
 
   <form method="post" id="main-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="field-row">
       <button type="submit" name="action" value="audit_current">Audit current cohorts + staff</button>
       <button type="submit" name="action" value="audit_all">Audit ALL users</button>
@@ -63,6 +64,7 @@
     {% set fixable_missing_groups = audit.missing_groups | selectattr('fixable') | list %}
 
     <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="last_mode" value="{{ mode }}">
       <input type="hidden" name="selected_group_gid" value="{{ selected_group_gid or '' }}">
 

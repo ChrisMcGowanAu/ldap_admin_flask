@@ -10,6 +10,26 @@ from xml.sax.saxutils import escape
 
 from ldap_core import SUBTREE, config, get_service_connection, logger
 
+
+def _group_base() -> str:
+    base = getattr(config, "LDAP_GROUP_BASE_DN", None)
+    if not base:
+        raise RuntimeError(
+            "LDAP_GROUP_BASE_DN is not set in config.py. "
+            "Please add it, e.g.: LDAP_GROUP_BASE_DN = 'ou=groups,dc=example,dc=org'"
+        )
+    return base
+
+
+def _user_base() -> str:
+    base = getattr(config, "LDAP_USER_BASE_DN", None)
+    if not base:
+        raise RuntimeError(
+            "LDAP_USER_BASE_DN is not set in config.py. "
+            "Please add it, e.g.: LDAP_USER_BASE_DN = 'ou=people,dc=example,dc=org'"
+        )
+    return base
+
 EXCEL_NS_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 EXCEL_NS_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 PACKAGE_NS_REL = "http://schemas.openxmlformats.org/package/2006/relationships"
@@ -304,11 +324,8 @@ def build_users_by_primary_group_export() -> tuple[bytes, str, dict[str, int]]:
     """
     conn = get_service_connection()
     try:
-        group_base = getattr(config, "LDAP_GROUP_BASE_DN", "ou=groups,dc=lorien")
-        user_base = getattr(config, "LDAP_USER_BASE_DN", "ou=people,dc=lorien")
-
         conn.search(
-            search_base=group_base,
+            search_base=_group_base(),
             search_filter="(objectClass=posixGroup)",
             search_scope=SUBTREE,
             attributes=["cn", "gidNumber", "memberUid"],
@@ -344,7 +361,7 @@ def build_users_by_primary_group_export() -> tuple[bytes, str, dict[str, int]]:
                 secondary_by_uid[uid].append(cn)
 
         conn.search(
-            search_base=user_base,
+            search_base=_user_base(),
             search_filter="(uid=*)",
             search_scope=SUBTREE,
             attributes=[

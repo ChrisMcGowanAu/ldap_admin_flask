@@ -66,35 +66,6 @@ def ldap_delete_user(uid: str, test_mode: bool = False) -> Tuple[bool, str]:
         conn.unbind()
 
 
-def ldap_list_all_users(limit: int = 5000):
-    """Return list of {uid, gidNumber, cn, dn} for all users.
-    Not currently used but left in for possible future use"""
-    conn = _get_service_connection()
-    try:
-        conn.search(
-            search_base=config.LDAP_USER_BASE_DN,
-            search_filter="(uid=*)",
-            search_scope=SUBTREE,
-            attributes=["uid", "gidNumber", "cn"],
-            size_limit=limit,
-        )
-        sorted_entries = sorted(conn.entries, reverse=False)
-        out = []
-        # for e in conn.entries:
-        for e in sorted_entries:
-            out.append(
-                {
-                    "uid": getattr(e, "uid", None).value,
-                    "gidNumber": getattr(e, "gidNumber", None).value,
-                    "cn": getattr(e, "cn", None).value,
-                    "dn": e.entry_dn,
-                }
-            )
-        return out, "OK"
-    finally:
-        conn.unbind()
-
-
 def ldap_search_users(uid_fragment: str, limit: int = 5000):
     """
     Returns list of {"uid","cn","gidNumber","homeDirectory","dn"} for uid fragment search.
@@ -465,36 +436,6 @@ def _get_next_uid_number(conn: Connection) -> int:
         except Exception:
             continue
     return max_uid + 1
-
-
-def _original_find_user_dn(conn: Connection, username: str) -> Optional[str]:
-    """Find the DN for a user with the given uid or uid fragment using an existing service connection."""
-    username = username.strip()
-    if not username:
-        return None
-
-    # Allow simple partial search: treat input as a fragment of uid.
-    # If the caller wants raw LDAP wildcards, they can include '*' themselves.
-    if "*" in username:
-        uid_filter_value = username
-    else:
-        uid_filter_value = f"*{username}*"
-
-    search_filter = f"(uid={uid_filter_value})"
-
-    conn.search(
-        search_base=config.LDAP_USER_BASE_DN,
-        search_filter=search_filter,
-        search_scope=SUBTREE,
-        # no explicit attributes; we only need entry_dn
-    )
-    if not conn.entries:
-        return None
-    if len(conn.entries) > 1:
-        # sorted_entries = sorted(conn.entries, reverse=False)
-        # logger.info(str(sorted_entries))
-        logger.warning("Multiple entries found for uid fragment '%s'; using first", username)
-    return conn.entries[0].entry_dn
 
 
 def _find_available_username(conn: Connection, base_username: str) -> str:

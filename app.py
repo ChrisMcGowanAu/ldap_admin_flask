@@ -35,17 +35,18 @@ from flask import (
     session,
     url_for,
 )
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 
 import config
 from home_paths import compute_home_directory
 from ldap_core import logger
 from ldap_password import (
-    ldap_change_password,  # uses test_mode parameter :contentReference[oaicite:1]{index=1}
+    ldap_change_password,
 )
 from ldap_reports import build_users_by_primary_group_export
 
-# from ldap_users import ldap_get_user  # optional but nice for preview (if you have it)
 from ldap_utils import (
     ldap_add_user_to_existing_group,
     ldap_add_user_to_group,
@@ -76,9 +77,6 @@ def _norm(name: str) -> str:
     return (name or "").strip().lower()
 
 
-# =========================================
-#  ADD THIS BLOCK HERE  (before app = Flask)
-# =========================================
 def _get_field(row: dict, *names: str) -> str:
     """
     Return the first non-empty field from the given possible column names.
@@ -297,21 +295,62 @@ def _build_group_membership_preview(rows: list[dict[str, Any]]):
     return preview, stats
 
 
-# =========================================
-# END helper addition
-# =========================================
-
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY
 app.permanent_session_lifetime = timedelta(minutes=60)
 
+# Rate limiter: protects the login endpoint against brute-force attacks.
+# Default storage is in-process memory (suitable for single-process deployments
+# behind gunicorn with --workers 1 or systemd).  For multi-worker deployments
+# configure a Redis backend via RATELIMIT_STORAGE_URI in the environment.
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[],          # no global limit; only the login route is restricted
+    storage_uri="memory://",
+)
 
 TEST_MODE = config.TEST_MODE
 
 
 @app.before_request
 def ensure_csrf_token():
+    """Generate a per-session CSRF token on first request."""
     session.setdefault("_csrf_token", secrets.token_urlsafe(32))
+
+
+@app.before_request
+def validate_csrf_token():
+    """Reject state-changing POST requests that lack a valid CSRF token.
+
+    The token is embedded in every HTML form via the ``{{ csrf_token() }}``
+    Jinja2 helper (injected by ``inject_globals``).  JSON API endpoints
+    (``/api/*``) are exempt because they use ``Content-Type: application/json``
+    rather than form submissions.
+    """
+    if request.method != "POST":
+        return
+    # Exempt JSON API routes — callers use Authorization headers, not cookies.
+    if request.path.startswith("/api/"):
+        return
+    token_in_session = session.get("_csrf_token")
+    token_in_form = request.form.get("_csrf_token")
+    if not token_in_session or not token_in_form:
+        logger.warning(
+            "CSRF token missing: path=%s remote=%s",
+            request.path,
+            request.remote_addr,
+        )
+        flash("Invalid or missing security token. Please try again.", "danger")
+        return redirect(request.referrer or url_for("login"))
+    if not secrets.compare_digest(token_in_session, token_in_form):
+        logger.warning(
+            "CSRF token mismatch: path=%s remote=%s",
+            request.path,
+            request.remote_addr,
+        )
+        flash("Security token mismatch. Please try again.", "danger")
+        return redirect(request.referrer or url_for("login"))
 
 
 @app.context_processor
@@ -320,20 +359,8 @@ def inject_version():
 
 
 def is_test_mode() -> bool:
-    # from flask import session
-
+    """Return effective test mode for the current session (falls back to config default)."""
     return session.get("test_mode", config.TEST_MODE)
-
-
-def get_effective_test_mode() -> bool:
-    """
-    Per-session test mode:
-    - Starts from config.TEST_MODE
-    - Can be toggled per browser session
-    """
-    # from flask import session
-
-    return session.get("test_mode", TEST_MODE)
 
 
 def _normalise_class_for_import(raw: str) -> str | None:
@@ -440,10 +467,10 @@ def _gid_from_dual_input(
 
 @app.context_processor
 def inject_globals():
-    # Makes TEST_MODE and effective_test_mode visible in templates
+    """Expose test-mode flag and CSRF token helper to all templates."""
     return {
-        "TEST_MODE": is_test_mode(),  # global default
-        "effective_test_mode": get_effective_test_mode(),  # session override
+        "effective_test_mode": is_test_mode(),
+        "csrf_token": lambda: session.get("_csrf_token", ""),
     }
 
 
@@ -783,9 +810,6 @@ def bulk_import():
             return render_template("bulk_import.html", results=None, test_mode=is_test_mode())
 
         try:
-            # import csv
-            # import io
-
             data = file.read().decode("utf-8-sig")
             reader = csv.DictReader(io.StringIO(data))
 
@@ -919,6 +943,7 @@ def bulk_import_template():
 
 @app.route("/", methods=["GET", "POST"])
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()

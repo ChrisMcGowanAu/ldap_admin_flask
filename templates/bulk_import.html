@@ -23,6 +23,7 @@
   </ul>
 
   <form method="POST" id="main-form" enctype="multipart/form-data" class="mb-0">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <input type="file" name="csvfile" accept=".csv" class="form-control mb-0" required>
     <button type="submit" class="btn btn-primary w-25">Upload</button>
   </form>
