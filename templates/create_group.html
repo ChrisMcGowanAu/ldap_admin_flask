@@ -10,6 +10,7 @@
   </p>
 
   <form method="post" id="main-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="field-row">
       <div class="field">
         <label for="cn">Group name (cn)</label>

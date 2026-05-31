@@ -8,6 +8,7 @@
     </p>
 
     <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <!-- Search section -->
         <div class="field">
             <label for="username">Username (fragment is OK)</label>

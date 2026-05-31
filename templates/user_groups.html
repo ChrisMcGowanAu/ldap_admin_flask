@@ -8,6 +8,7 @@
   </p>
 
   <form method="post" id="main-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="field">
       <label for="username">Username / uid fragment</label>
       <input id="username" name="username" value="{{ username or '' }}" autocomplete="off" placeholder="e.g. chris or max">
@@ -37,6 +38,7 @@
             <td><code>{{ m.homeDirectory or '' }}</code></td>
             <td>
               <form method="post" style="display:inline;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="selected_uid" value="{{ m.uid }}">
                 <button type="submit" name="action" value="choose_user">Open</button>
               </form>
@@ -58,6 +60,7 @@
 
     <h3>Add to supplementary group</h3>
     <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="username" value="{{ user.uid }}">
       <div class="field">
         <label for="group_gid">Choose existing group</label>
@@ -106,6 +109,7 @@
                   <span class="muted">managed by primary gidNumber / Group Audit</span>
                 {% else %}
                   <form method="post" style="display:inline;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="username" value="{{ user.uid }}">
                     <input type="hidden" name="remove_gid" value="{{ g.gidNumber }}">
                     <button type="submit" name="action" value="remove_group">Remove</button>
@@ -133,6 +137,7 @@
   </p>
 
   <form method="post" enctype="multipart/form-data" action="{{ url_for('user_groups') }}#bulk-group-membership">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="field">
       <label for="group_membership_csv">CSV file</label>
       <input type="file" id="group_membership_csv" name="group_membership_csv" accept=".csv,text/csv">

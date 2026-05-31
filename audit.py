@@ -11,34 +11,39 @@ _get_service_connection = get_service_connection
 
 
 def audit_log_new_user(row: Dict[str, Any]) -> None:
+    """Append one 'new user created' record to the per-group CSV audit file.
+
+    Files are written to NEW_USERS_AUDIT_DIR (configured in config.py).
+    Staff records go to ``ldap_new_users_staff.csv``; student records go to
+    ``ldap_new_users_students_<gidNumber>.csv``.
+
+    NOTE: The CSV contains the plaintext temporary password so that it can be
+    distributed to users.  The audit directory must be root-owned with mode
+    0700 and the files should be treated as sensitive.
+
+    This function never raises — failures are logged as warnings only.
     """
-    Append one 'new user created' record to CSV (Excel-friendly).
-    Never raises (logging only).
-    """
-    logger.info("audit_log_new_user")
-    fname = ""
     gid = str(row.get("gidNumber", "unknown"))
-    logger.info("audit_log_new_user gid=%s", str(gid))
+    logger.info("audit_log_new_user gid=%s", gid)
 
     if gid == str(config.STAFF_GID_NUMBER):
         fname = "ldap_new_users_staff.csv"
     else:
         fname = "ldap_new_users_students_" + gid + ".csv"
 
-    logger.info("audit_log_new_user fname=%s", fname)
     base_dir = getattr(config, "NEW_USERS_AUDIT_DIR", "/var/log/ldap_admin")
-    logger.info("audit_log_new_user base_dir=%s", base_dir)
     path = os.path.join(base_dir, fname)
 
     try:
-        logger.info("new user filename ->%s<-", path)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         file_exists = os.path.exists(path)
-        email = ""
+
         uid = row.get("uid", "")
         class_key = row.get("class_key", "")
-        gid_number = str(row.get("gid_number", "1"))
+        gid_number = row.get("gid_number", "")
         email = compute_email_for_uid(uid, class_key=class_key, gid_number=gid_number)
+        fullname = f"{row.get('givenName', '')} {row.get('sn', '')}".strip()
+
         header = [
             "Timestamp",
             "Admin",
@@ -55,16 +60,11 @@ def audit_log_new_user(row: Dict[str, Any]) -> None:
             w = csv.DictWriter(f, fieldnames=header)
             if not file_exists:
                 w.writeheader()
-            uid = row.get("uid", "")
-            class_key = row.get("class_key", "")
-            gid_number = row.get("gid_number", "")
-            email = compute_email_for_uid(uid, class_key=class_key, gid_number=gid_number)
-            fullname = str(row.get("givenName", "") + " " + row.get("sn", ""))
-            data = [
+            w.writerow(
                 {
                     "Timestamp": row.get("timestamp", ""),
                     "Admin": row.get("admin_user", ""),
-                    "Class": row.get("class_key", ""),
+                    "Class": class_key,
                     "First": row.get("givenName", ""),
                     "Last": row.get("sn", ""),
                     "Username": uid,
@@ -72,23 +72,9 @@ def audit_log_new_user(row: Dict[str, Any]) -> None:
                     "Email": email,
                     "FullName": fullname,
                 }
-            ]
-            data2 = [
-                {
-                    row.get("timestamp", ""),  # Timestamp
-                    row.get("admin_user", ""),  # Admin
-                    row.get("class_key", ""),  # Class
-                    row.get("givenName", ""),  # First
-                    row.get("sn", ""),  # Last
-                    uid,  # Username
-                    row.get("password", ""),  # Password
-                    email,  # Email
-                    row.get("dn", ""),  # FullName
-                }
-            ]
-            # logger.info(str(data))
-            logger.info(str(data))
-            logger.info(str(data2))
-            w.writerows(data)
+            )
+
+        logger.info("audit_log_new_user wrote record uid=%s path=%s", uid, path)
+
     except Exception as e:
         logger.warning("Failed to write new-user audit CSV (%s): %s", path, e)

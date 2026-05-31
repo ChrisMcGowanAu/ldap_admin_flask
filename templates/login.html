@@ -4,6 +4,7 @@
     <h2>Admin Login</h2>
     <p class="muted">Sign in with your LDAP admin (or IT staff) account.</p>
     <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <label for="username">Username (uid)</label>
         <input type="text" id="username" name="username" required autofocus>
 

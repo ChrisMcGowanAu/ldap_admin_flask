@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from functools import lru_cache
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent
@@ -24,17 +25,21 @@ def _is_dirty() -> bool:
         return False
 
 
+@lru_cache(maxsize=1)
 def get_app_version() -> str:
-    """
-    Return a friendly version string.
+    """Return a friendly version string, computed once and cached for the process lifetime.
+
+    Caching avoids forking two or three ``git`` subprocesses on every template render
+    (this function is called from an ``@app.context_processor``).
+
+    Override at deploy time by setting the ``LDAP_ADMIN_VERSION`` environment variable,
+    which is useful when the deployment host has no git available (e.g. Docker images).
 
     Examples:
       v0.2.0 - Group audit and supplementary group management
       v0.2.0 - Group audit and supplementary group management - dirty
       v0.2.0 + 3 commits (1c44e22)
       1c44e22
-
-    Falls back safely if git is unavailable.
     """
     env_ver = os.getenv("LDAP_ADMIN_VERSION")
     if env_ver:

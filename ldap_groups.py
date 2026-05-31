@@ -13,6 +13,28 @@ from ldap_core import (
 _get_service_connection = get_service_connection
 
 
+def _group_base() -> str:
+    """Return LDAP_GROUP_BASE_DN from config; raise clearly if not set."""
+    base = getattr(config, "LDAP_GROUP_BASE_DN", None)
+    if not base:
+        raise RuntimeError(
+            "LDAP_GROUP_BASE_DN is not set in config.py. "
+            "Please add it, e.g.: LDAP_GROUP_BASE_DN = 'ou=groups,dc=example,dc=org'"
+        )
+    return base
+
+
+def _user_base() -> str:
+    """Return LDAP_USER_BASE_DN from config; raise clearly if not set."""
+    base = getattr(config, "LDAP_USER_BASE_DN", None)
+    if not base:
+        raise RuntimeError(
+            "LDAP_USER_BASE_DN is not set in config.py. "
+            "Please add it, e.g.: LDAP_USER_BASE_DN = 'ou=people,dc=example,dc=org'"
+        )
+    return base
+
+
 def ldap_create_group(cn: str, gid_number: int, test_mode: bool = False):
     """
     Create a posixGroup with cn + gidNumber.
@@ -256,7 +278,7 @@ def ldap_list_posix_groups_for_select():
     conn = _get_service_connection()
     try:
         conn.search(
-            search_base=getattr(config, "LDAP_GROUP_BASE_DN", "ou=groups,dc=lorien"),
+            search_base=_group_base(),
             search_filter="(objectClass=posixGroup)",
             search_scope=SUBTREE,
             attributes=["cn", "gidNumber"],
@@ -325,9 +347,8 @@ def ldap_audit_group_membership(
 
     conn = _get_service_connection()
     try:
-        group_base = getattr(config, "LDAP_GROUP_BASE_DN", "ou=groups,dc=lorien")
         conn.search(
-            search_base=group_base,
+            search_base=_group_base(),
             search_filter="(objectClass=posixGroup)",
             search_scope=SUBTREE,
             attributes=["cn", "gidNumber", "memberUid"],
@@ -350,9 +371,8 @@ def ldap_audit_group_membership(
                 "member_uids": member_uids,
             }
 
-        user_base = getattr(config, "LDAP_USER_BASE_DN", "ou=people,dc=lorien")
         conn.search(
-            search_base=user_base,
+            search_base=_user_base(),
             search_filter="(uid=*)",
             search_scope=SUBTREE,
             attributes=["uid", "cn", "gidNumber"],
@@ -559,8 +579,6 @@ def ldap_cleanup_memberUid_for_uid(
     if not uid:
         return False, "Empty uid provided for cleanup.", []
 
-    group_base = getattr(config, "LDAP_GROUP_BASE_DN", "ou=groups,dc=lorien")
-
     try:
         conn = _get_service_connection()
     except Exception as e:
@@ -573,7 +591,7 @@ def ldap_cleanup_memberUid_for_uid(
         # Find all groups that reference this uid in memberUid
         safe_uid = escape_filter_chars(uid)
         conn.search(
-            search_base=group_base,
+            search_base=_group_base(),
             search_filter=f"(&(objectClass=posixGroup)(memberUid={safe_uid}))",
             search_scope=SUBTREE,
             attributes=["cn", "memberUid"],
@@ -693,7 +711,7 @@ def ldap_get_group_by_gid(gid_number: int) -> Tuple[Optional[Dict[str, Any]], st
     conn = _get_service_connection()
     try:
         conn.search(
-            search_base=getattr(config, "LDAP_GROUP_BASE_DN", "ou=groups,dc=lorien"),
+            search_base=_group_base(),
             search_filter=f"(&(objectClass=posixGroup)(gidNumber={gid}))",
             search_scope=SUBTREE,
             attributes=["cn", "gidNumber", "memberUid"],
@@ -734,7 +752,7 @@ def ldap_list_groups_for_uid(uid: str) -> Tuple[List[Dict[str, Any]], str]:
     try:
         safe_uid = escape_filter_chars(uid)
         conn.search(
-            search_base=getattr(config, "LDAP_GROUP_BASE_DN", "ou=groups,dc=lorien"),
+            search_base=_group_base(),
             search_filter=f"(&(objectClass=posixGroup)(memberUid={safe_uid}))",
             search_scope=SUBTREE,
             attributes=["cn", "gidNumber", "memberUid"],
@@ -829,9 +847,9 @@ def ldap_remove_user_from_existing_group(
 
 
 def _group_dn_for_gid(gid_number: int) -> str:
-    """Return the DN for the posixGroup matching the gidNumber.
-    Staff: cn=staff,ou=groups,dc=lorien (gid 500)
-    Students: cn=classYYYY,ou=groups,dc=lorien
+    """Return the expected DN for the posixGroup matching the gidNumber.
+    Staff:    cn=staff,<LDAP_GROUP_BASE_DN>
+    Students: cn=classYYYY,<LDAP_GROUP_BASE_DN>
     """
     gid_number = int(gid_number)
     if gid_number == int(config.STAFF_GID_NUMBER):
@@ -839,5 +857,4 @@ def _group_dn_for_gid(gid_number: int) -> str:
     else:
         tmpl = getattr(config, "CLASS_GROUP_CN_TEMPLATE", "class{gidNumber}")
         cn = tmpl.format(gidNumber=gid_number).lower()
-    base = getattr(config, "LDAP_GROUP_BASE_DN", "ou=groups,dc=lorien")
-    return f"cn={cn},{base}"
+    return f"cn={cn},{_group_base()}"
