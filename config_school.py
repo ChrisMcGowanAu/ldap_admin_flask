@@ -103,7 +103,7 @@ STAFF_GROUP_CN = "staff"
 # Valid values:
 #   "classic_unix"
 #   "graduation_year_group"
-# 
+#
 # For general use
 # HOME_STYLE = "classic_unix"
 # For Schools
@@ -121,7 +121,7 @@ GRAD_YEAR_CLASS_DIR_TEMPLATE = "class{gidNumber}"
 # when the Flask/Gunicorn service account has suitable permissions, or when the
 # path is mounted with permissions that allow creation.
 CREATE_HOME_DIR = False
-HOME_DIR_MODE = 0o700
+HOME_DIR_MODE = 0700
 
 
 # -----------------------------------------------------------------------------
