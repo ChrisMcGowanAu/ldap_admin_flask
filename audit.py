@@ -19,7 +19,7 @@ def audit_log_new_user(row: Dict[str, Any]) -> None:
 
     NOTE: The CSV contains the plaintext temporary password so that it can be
     distributed to users.  The audit directory must be root-owned with mode
-    0700 and the files should be treated as sensitive.
+    700 and the files should be treated as sensitive.
 
     This function never raises — failures are logged as warnings only.
     """

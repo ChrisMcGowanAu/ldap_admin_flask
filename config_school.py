@@ -103,7 +103,7 @@ STAFF_GROUP_CN = "staff"
 # Valid values:
 #   "classic_unix"
 #   "graduation_year_group"
-# 
+#
 # For general use
 # HOME_STYLE = "classic_unix"
 # For Schools
@@ -196,8 +196,8 @@ NEW_USERS_AUDIT_DIR = "/var/lib/ldap_admin_flask/audit"
 
 # Suggested permissions for directories containing generated password/account
 # records, if your site uses those workflows:
-#   directory: root-owned, mode 0700
-#   files:     root-owned, mode 0600
+#   directory: root-owned, mode 700
+#   files:     root-owned, mode 600
 
 
 # -----------------------------------------------------------------------------
