@@ -20,7 +20,7 @@ def compute_home_directory(username: str, class_key: str) -> Tuple[int, str]:
     """
     username = (username or "").strip().lower()
     class_key = (class_key or "").strip()
-    
+
     logger.info("compute_home_directory user %s class %s", username, class_key)
 
     home_style = getattr(config, "HOME_STYLE", "classic_unix").strip().lower()

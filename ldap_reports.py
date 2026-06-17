@@ -30,6 +30,7 @@ def _user_base() -> str:
         )
     return base
 
+
 EXCEL_NS_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 EXCEL_NS_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 PACKAGE_NS_REL = "http://schemas.openxmlformats.org/package/2006/relationships"

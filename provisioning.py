@@ -1,5 +1,6 @@
 import os
 import shlex
+import stat
 from typing import Optional, Tuple
 
 import config

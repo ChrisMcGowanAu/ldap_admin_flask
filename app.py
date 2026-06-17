@@ -24,6 +24,7 @@ import os
 import secrets
 from datetime import timedelta
 from typing import Any
+
 from flask import (
     Flask,
     Response,
@@ -38,7 +39,6 @@ from flask import (
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-
 import config
 from home_paths import compute_home_directory
 from ldap_core import logger
@@ -46,7 +46,6 @@ from ldap_password import (
     ldap_change_password,
 )
 from ldap_reports import build_users_by_primary_group_export
-
 from ldap_utils import (
     ldap_add_user_to_existing_group,
     ldap_add_user_to_group,
@@ -306,7 +305,7 @@ app.permanent_session_lifetime = timedelta(minutes=60)
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
-    default_limits=[],          # no global limit; only the login route is restricted
+    default_limits=[],  # no global limit; only the login route is restricted
     storage_uri="memory://",
 )
 
