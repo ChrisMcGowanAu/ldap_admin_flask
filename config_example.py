@@ -11,7 +11,7 @@ Important:
 """
 
 from __future__ import annotations
-
+import stat
 import datetime
 from typing import Any, Dict, Optional
 
@@ -118,8 +118,8 @@ GRAD_YEAR_CLASS_DIR_TEMPLATE = "class{gidNumber}"
 # Create home directories on the filesystem when creating users. This only works
 # when the Flask/Gunicorn service account has suitable permissions, or when the
 # path is mounted with permissions that allow creation.
-CREATE_HOME_DIR = False
-HOME_DIR_MODE = 700
+CREATE_HOME_DIR = True
+HOME_DIR_MODE = stat.S_IRWXU
 
 
 # -----------------------------------------------------------------------------

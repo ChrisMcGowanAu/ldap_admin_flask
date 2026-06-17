@@ -20,7 +20,7 @@ def create_home_directory(
 
     try:
         os.makedirs(path, exist_ok=True)
-        mode = getattr(config, "HOME_DIR_MODE", 700)
+        mode = getattr(config, "HOME_DIR_MODE", stat.S_IRWXU)
         os.chmod(path, mode)
         os.chown(path, int(uid_number), int(gid_number))
         return True, f"Home directory ready: {path}"
