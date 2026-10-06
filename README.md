@@ -1,3 +1,7 @@
+[![Automatic Dependency Submission](https://github.com/ChrisMcGowanAu/ldap_admin_flask/actions/workflows/dependency-graph/auto-submission/badge.svg)](https://github.com/ChrisMcGowanAu/ldap_admin_flask/actions/workflows/dependency-graph/auto-submission)
+[![Dependabot Updates](https://github.com/ChrisMcGowanAu/ldap_admin_flask/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/ChrisMcGowanAu/ldap_admin_flask/actions/workflows/dependabot/dependabot-updates)
+[![Dependency Graph](https://github.com/ChrisMcGowanAu/ldap_admin_flask/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/ChrisMcGowanAu/ldap_admin_flask/actions/workflows/dependabot/update-graph)
+[![Python application](https://github.com/ChrisMcGowanAu/ldap_admin_flask/actions/workflows/python-app.yml/badge.svg)](https://github.com/ChrisMcGowanAu/ldap_admin_flask/actions/workflows/python-app.yml)
 # LDAP Admin Flask Tool
 
 A Flask-based LDAP administration tool for schools and small organisations.
